@@ -6,16 +6,16 @@ Self-Driving Car Engineer Nanodegree Program
 
 ## Introduction
 
-This project implements a [Model Predictive Controller(MPC)](https://en.wikipedia.org/wiki/Model_predictive_control) to control a car in Udacity's simulator([it could be downloaded here](https://github.com/udacity/self-driving-car-sim/releases)). The simulator sends car telemetry information (the data specifications are [here](./DATA.md)) to the MPC using [WebSocket](https://en.wikipedia.org/wiki/WebSocket) and it receives the steering angle and throttle. The MPC uses the [uWebSockets](https://github.com/uNetworking/uWebSockets) WebSocket implementation to handle this communication. Udacity provides a seed project to start from on this project ([here](https://github.com/udacity/CarND-MPC-Project)). The solution must be robust to 100ms latency, as one may encounter in real-world application.
+This project implemented a Model Predictive Controller to drive a car in Udacity provided simulator around a track. There are few sharp turns in the track which is difficult to maneuver. The MPC engine recevies car telemetry information using [WebSocket](https://en.wikipedia.org/wiki/WebSocket). And it feeds the simulator with steering angle and throttle. There is 100 ms latency between generation of a pair of data and its application. The solution should be able to handle it robustly.
 
-This solution, as the Nanodegree lessons suggest, makes use of the IPOPT and CPPAD libraries to calculate an optimal trajectory and its associated actuation commands in order to minimize error with a third-degree polynomial fit to the given waypoints. The optimization considers only a short duration's worth of waypoints, and produces a trajectory for that duration based upon a model of the vehicle's kinematics and a cost function based mostly on the vehicle's cross-track error (roughly the distance from the track waypoints) and orientation angle error, with other cost factors included to improve performance. 
+The solution uses couple of libraries - IPOPT and CPPAD for calculation as suggested in the course. The implementation is pretty straight forward as it was mostly similar to the lessons taught but tuning the parameter is main trick.
+
 
 ## Rubric Points
 
 ### The Model**: 
-    *Student describes their model in detail. This includes the state, actuators and update equations.*
 
-The model used is a Kinematic model neglecting the complex interactions between the tires and the road. The model equations are as follow:
+The model implemented is the simpler Kinematic model which performs well in most of the cases at low speed. I dont think there is scope of using any other dynamic model as no other details related to tire force etc are given. The model equations are given below:
 
 ```
 x[t] = x[t-1] + v[t-1] * cos(psi[t-1]) * dt
@@ -34,7 +34,7 @@ Where:
 - `cte` : Cross-track error.
 - `epsi` : Orientation error.
 
-Those values are considered the state of the model. In addition to that, `Lf` is the distance between the car of mass and the front wheels (this is provided by Udacity's seed project). The other two values are the model output:
+They comprises the state of the model. In addition to that, `Lf` is the distance between the car of center of gravity and the front wheels  and this is provided in the seed project directory. The other two values are the model output:
 
 - `a` : Car's acceleration (throttle).
 - `delta` : Steering angle.
@@ -45,22 +45,24 @@ The objective is to find the acceleration (`a`) and the steering angle(`delta`) 
 - Square sum of the difference actuators to penalize a lot of actuator's actions. It could be found [here](./src/MPC.cpp#L58).
 - Square sum of the difference between two consecutive actuator values to penalize sharp changes. It could be found [here](./src/MPC.cpp#L65).
 
-How much weight each of these factors had were tuned manually to obtain a successful track ride without leaving the road.
+How much weight each of these factors had were tuned manually to obtain a successful track ride without leaving the road. I tried with 1000 as the mutiplication factor for 'cte' and 'epsi'. But car was going off the track with these values so I increases the weightage for them.
+The other parameter that helped a lot is tuning of the change of actuators. Increasing the value made the car trajectory smoother.
 
 ### Timestep Length and Elapsed Duration (N & dt)**: 
-    *Student discusses the reasoning behind the chosen N (timestep length) and dt (elapsed duration between timesteps) values. Additionally the student details the previous values tried.*
 
-The values chosen for N and dt are 10 and 0.1, respectively. This was at the suggestion of Udacity's provided office hours for the project. These values mean that the optimizer is considering a one-second duration in which to determine a corrective trajectory. Adjusting either N or dt (even by small amounts) often produced erratic behavior. So, finally settled on the values 10 and 0.1 . 
+The values chosen for N and dt are 10 and 0.1, respectively. The values are obtained from Udacity's video lecture on the project. We learnt how changing the values would effect the behavior in the course and also in that video. A smaller dt values means we are recalculating the position of the car frequently with higher resolution. 
+
+As far as N is concerned if we increase N then it becomes difficult for solver to fit a solution. This would become computationally expensive. I have tried increasing N to 20 and 25 but even car was not able to complete a full lap with these values at reference speed 100.
+
+After keeping N to 10 I started adjusting dt. I was able to achieve speed of 93 mph with dt set to 0.08. But the car was slightly going into the red curb so, finally settled on the values 10 and 0.1 and achieved max spped of 91 mph. 
 
 ### Polynomial Fitting and MPC Preprocessing**: 
-    *A polynomial is fitted to waypoints. If the student preprocesses waypoints, the vehicle state, and/or actuators prior to the MPC procedure it is described.*
 
-The waypoints are preprocessed by transforming them to the vehicle's perspective (see main.cpp lines 101-106). This simplifies the process to fit a polynomial to the waypoints because the vehicle's x and y coordinates are now at the origin (0, 0) and the orientation angle is also zero. 
+The simulator gives MPC few waypoints but they are in MAP co-ordinate to I have used simple co-ordinate transformation (see main.cpp lines 101-106) to change them to vehicle's perspective. This simplifies fitting a polynomial because the vehicle's x and y coordinates are now at the origin (0, 0) and the orientation angle is also zero. This was also suggested in the official video for the project.
 
 ### Model Predictive Control with Latency**: 
-    *The student implements Model Predictive Control that handles a 100 millisecond latency. Student provides details on how they deal with latency.*
 
-To handle actuator latency, the state values are calculated using the model and the delay interval(100 ms). These values are used instead of the initial one. The code implementing that could be found at [./src/main.cpp](./src/main.cpp#L127) from line 127 to line 137.
+The other key trick is to handle actuator latency. So, instead of setting the state values to the simulator data, I have added a delay interval of (100 ms) and calculated future state based on the model equation. Then I have obtained the new state which is sent to solver. The code implementing that could be found at [./src/main.cpp](./src/main.cpp#L127) from line 127 to line 137.
 
 
 ## Dependencies
