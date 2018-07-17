@@ -54,7 +54,7 @@ The values chosen for N and dt are 10 and 0.1, respectively. The values are obta
 
 As far as N is concerned if we increase N then it becomes difficult for solver to fit a solution. This would become computationally expensive. I have tried increasing N to 20 and 25 but even car was not able to complete a full lap with these values at reference speed 100.
 
-After keeping N to 10 I started adjusting dt. I was able to achieve speed of 93 mph with dt set to 0.08. But the car was slightly going into the red curb so, finally settled on the values 10 and 0.1 and achieved max spped of 91 mph. 
+After keeping N to 10 I started adjusting dt. I was able to achieve higher speed with dt set to 0.08. But the car was slightly going into the red curb so, finally settled on the values 10 and 0.1 and achieved max spped of 93+ mph. 
 
 ### Polynomial Fitting and MPC Preprocessing**: 
 
